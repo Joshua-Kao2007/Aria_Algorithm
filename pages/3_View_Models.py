@@ -3,7 +3,7 @@ import os
 import joblib
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, ConfusionMatrixDisplay
 from sklearn.ensemble import StackingClassifier, RandomForestClassifier, AdaBoostClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.linear_model import LinearRegression
@@ -20,6 +20,9 @@ st.title("View Trained Models")
 
 # Load available model files
 model_files = [f for f in os.listdir(MODEL_DIR) if f.endswith(".pkl") and "_X_test" not in f and "_y_test" not in f]
+
+REVERSE_LABEL_MAP = {0: "Under-Patron", 1: "Patron+"}
+  
 
 if not model_files:
     st.warning("⚠️ No models found in the /models directory.")
@@ -42,10 +45,16 @@ if st.button("🔍 Submit to View Model Performance"):
 
         if isinstance(model_data, dict) and "model" in model_data:
             model = model_data["model"]
+            X_train = model_data.get("X_train")
+            y_train = model_data.get("y_train")
             X_test = model_data.get("X_test")
             y_test = model_data.get("y_test")
         else:
             st.error("❌ Model file is not in the expected dictionary format.")
+            st.stop()
+        
+        if X_train is None or y_train is None:
+            st.error("❌ Model file is missing X_train or y_train.")
             st.stop()
 
         if X_test is None or y_test is None:
@@ -57,29 +66,56 @@ if st.button("🔍 Submit to View Model Performance"):
 
         # Display header info
         st.header(f"📌 Model: `{model_name}`")
-        st.markdown(f"**🔢 Test Set Size:** {len(y_test)} rows")
-        st.markdown(f"**🧮 Number of Features:** {X_test.shape[1]}")
+        st.markdown(f"Training Set Size: {len(y_train)} rows")
+
+        st.markdown(f"**Test Set Size:** {len(y_test)} rows")
+        st.markdown(f"**Number of Features:** {X_test.shape[1]}")
         st.markdown("---")
 
+        with st.expander("Show full training set"):
+            st.subheader("Trained Parameters")
+            st.dataframe(X_train, use_container_width=True)
+            st.subheader("Trained Outputs")
+            st.dataframe(pd.DataFrame(y_train.map(REVERSE_LABEL_MAP), columns=["Donor_Category"]), use_container_width=True)
+
+ 
         # Classification Report
-        st.subheader("📊 Classification Report")
-        report = classification_report(y_test, y_pred, output_dict=True)
-        report_df = pd.DataFrame(report).transpose()
-        st.dataframe(report_df.style.format("{:.2f}"), use_container_width=True)
+        y_test_named = y_test.map(REVERSE_LABEL_MAP)
+        y_pred_named = pd.Series(y_pred, index=y_test.index).map(REVERSE_LABEL_MAP)
+
+        report = classification_report(y_test_named, y_pred_named, output_dict=True)
+
+        accuracy = accuracy_score(y_test_named, y_pred_named)
+        metrics_to_show = ["Under-Patron", "Patron+", "macro avg", "weighted avg"]
+        display_report = pd.DataFrame({key: report[key] for key in metrics_to_show}).T[["precision", "recall", "f1-score"]]
+        display_report = display_report.rename(columns={
+            "precision": "Precision",
+            "recall": "Recall",
+            "f1-score": "F1 Score"
+        })
+
+        # Add accuracy as a separate row
+        display_report.loc["Accuracy"] = [accuracy, accuracy, accuracy]
+
+        # Round and show
+        st.subheader("📊 Key Metrics")
+        st.dataframe(display_report.round(3), use_container_width=True)
+
 
         # Confusion Matrix
         st.subheader("🧾 Confusion Matrix")
-        cm = confusion_matrix(y_test, y_pred)
+        cm = confusion_matrix(y_test_named, y_pred_named, labels = ["Under-Patron", "Patron+"])
         fig, ax = plt.subplots()
-        ConfusionMatrixDisplay(confusion_matrix=cm).plot(ax=ax)
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["Under-Patron", "Patron+"])
+        disp.plot(ax=ax, cmap="Blues")
         st.pyplot(fig)
 
         # Preview of test data
         st.subheader("🔍 Test Data with Predictions")
         preview_df = X_test.copy()
-        preview_df["Actual"] = y_test.values
-        preview_df["Predicted"] = y_pred
-        st.dataframe(preview_df.head(20), use_container_width=True)
+        preview_df["Actual"] = y_test_named
+        preview_df["Predicted"] = y_pred_named
+        st.dataframe(preview_df, use_container_width=True)
 
     except Exception as e:
         st.error(f"❌ Failed to load or process model: {e}")

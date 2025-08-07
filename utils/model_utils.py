@@ -63,6 +63,8 @@ def train_and_save_stacked_model(uploaded_files, model_choices, model_name, fina
         os.makedirs("models", exist_ok=True)
         joblib.dump({
             "model": stacking_model,
+            "X_train": X_train,
+            "y_train": y_train,
             "X_test": X_test,
             "y_test": y_test,
             "columns": X.columns.tolist(),
