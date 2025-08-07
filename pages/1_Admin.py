@@ -39,7 +39,7 @@ if st.session_state.show_builder:
     st.markdown("### Step 2: Upload & Configure Each Category")
 
     category_info = []  # Stores (name, file, model)
-    model_options = ["Logistic Regression", "Random Forest", "AdaBoost", "KNN"]
+    model_options = ["Logistic Regression", "Random Forest", "AdaBoost", "KNN", "XGBoost", "Linear Regression", "LightGBM"]
 
     for i in range(num_categories):
         default_name = f"Category {i+1}"
@@ -53,7 +53,7 @@ if st.session_state.show_builder:
         with col2:
             model = st.selectbox(f"Model for {name}", model_options, key=f"model_{i}")
 
-        category_info.append((name, uploaded, model))
+        category_info.append((name, uploaded, model)) #name of the cateogory, 
         st.markdown("---")
 
     # -------------------- STACKING --------------------
@@ -75,26 +75,26 @@ if st.session_state.show_builder:
         final_model_choice = st.selectbox("Choose final stacking model (meta-estimator):", model_options, key="final_estimator")
 
         # Step 3: Training logic
-if st.button("Confirm and Train Model"):
+    if st.button("Confirm and Train Model"):
     # Input validation
-    if not model_name.strip():
-        st.error("❗ Please enter a valid name for your stacked model.")
-    elif any(file is None for file in [file for (_, file, _) in category_info]):
-        st.error("❗ Please upload a CSV file for every category.")
-    else:
-        with st.spinner("Training and stacking models..."):
-            uploaded_files = [file for (_, file, _) in category_info]
-            model_choices = [model for (_, _, model) in category_info]
+        if not model_name.strip():
+            st.error("❗ Please enter a valid name for your stacked model.")
+        elif any(file is None for file in [file for (_, file, _) in category_info]):
+            st.error("❗ Please upload a CSV file for every category.")
+        else:
+            with st.spinner("Training and stacking models..."):
+                uploaded_files = [file for (_, file, _) in category_info]
+                model_choices = [model for (_, _, model) in category_info]
 
-            success = train_and_save_stacked_model(
-                uploaded_files,
-                model_choices,
-                model_name.strip(),   # Cleaned model name
-                final_model_choice
-            )
+                success = train_and_save_stacked_model(
+                    uploaded_files,
+                    model_choices,
+                    model_name.strip(),   # Cleaned model name
+                    final_model_choice
+                )
 
-            if success:
-                st.success(f"✅ Model `{model_name}` saved successfully in `/models`.")
-                st.session_state.stack_ready = False
-            else:
-                st.error("❌ Something went wrong during training. Please check your files and try again.")
+                if success:
+                    st.success(f"✅ Model `{model_name}` saved successfully in `/models`.")
+                    st.session_state.stack_ready = False
+                else:
+                    st.error("❌ Something went wrong during training. Please check your files and try again.")
