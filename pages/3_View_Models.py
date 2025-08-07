@@ -3,7 +3,7 @@ import os
 import joblib
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, ConfusionMatrixDisplay
 from sklearn.ensemble import StackingClassifier, RandomForestClassifier, AdaBoostClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.linear_model import LinearRegression
@@ -83,24 +83,17 @@ if st.button("🔍 Submit to View Model Performance"):
         y_test_named = y_test.map(REVERSE_LABEL_MAP)
         y_pred_named = pd.Series(y_pred, index=y_test.index).map(REVERSE_LABEL_MAP)
 
-        report = classification_report(y_test_named, y_pred_named, output_dict=True)
-
+        precision = precision_score(y_test_named, y_pred_named, pos_label="Patron+")
+        recall = recall_score(y_test_named, y_pred_named, pos_label="Patron+")
+        f1 = f1_score(y_test_named, y_pred_named, pos_label="Patron+")
         accuracy = accuracy_score(y_test_named, y_pred_named)
-        metrics_to_show = ["Under-Patron", "Patron+", "macro avg", "weighted avg"]
-        display_report = pd.DataFrame({key: report[key] for key in metrics_to_show}).T[["precision", "recall", "f1-score"]]
-        display_report = display_report.rename(columns={
-            "precision": "Precision",
-            "recall": "Recall",
-            "f1-score": "F1 Score"
-        })
 
-        # Add accuracy as a separate row
-        display_report.loc["Accuracy"] = [accuracy, accuracy, accuracy]
-
-        # Round and show
-        st.subheader("📊 Key Metrics")
-        st.dataframe(display_report.round(3), use_container_width=True)
-
+        # Display
+        st.subheader("📊 Model Performance Metrics")
+        st.markdown(f"**Precision:** {precision:.3f}")
+        st.markdown(f"**Recall:** {recall:.3f}")
+        st.markdown(f"**F1 Score:** {f1:.3f}")
+        st.markdown(f"**Accuracy:** {accuracy:.3f}")
 
         # Confusion Matrix
         st.subheader("🧾 Confusion Matrix")

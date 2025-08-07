@@ -1,87 +1,62 @@
 import streamlit as st
+import pandas as pd
 import os
 import joblib
-import pandas as pd
-from utils.model_imputation import clean_and_impute
-# Constants
+from utils.prediction_imputation import impute_for_prediction
+# --- Setup ---
 MODEL_DIR = "models"
+REQUIRED_KEY = "columns"
 
-st.set_page_config(page_title="🎯 Predict Patron+ Probability", layout="wide")
-st.title("🎯 Predict Patron+ Probability")
+st.set_page_config(page_title="📈 Predict Patron+ Probability", layout="wide")
+st.title("📈 Predict Patron+ Probability Using a Trained Model")
 
-# Get all available model files
+# --- Model selection ---
 model_files = [f for f in os.listdir(MODEL_DIR) if f.endswith(".pkl")]
+model_name = st.selectbox("📂 Select a trained model", sorted(model_files))
 
-if not model_files:
-    st.warning("⚠️ No models available. Please train a model first.")
-    st.stop()
+# --- File upload ---
+uploaded_csv = st.file_uploader("📤 Upload a CSV with customer_no and feature columns (no Donor_Category)", type=["csv"])
 
-# Select model
-selected_model_file = st.selectbox("📂 Choose a trained model", sorted(model_files))
-model_path = os.path.join(MODEL_DIR, selected_model_file)
-
-# Load model
-try:
-    with open(model_path, "rb") as f:
-        model_data = joblib.load(f)
-
-    model = model_data["model"]
-    required_columns = model_data["columns"]
-
-except Exception as e:
-    st.error(f"❌ Failed to load model: {e}")
-    st.stop()
-
-# Upload data
-st.markdown("📤 Upload a **CSV file** with constituent features (must match training columns):")
-uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
-
-if uploaded_file:
+if model_name and uploaded_csv:
     try:
-        input_df = pd.read_csv(uploaded_file)
+        # Load model
+        with open(os.path.join(MODEL_DIR, model_name), "rb") as f:
+            model_data = joblib.load(f)
 
-        # Drop 'customer_no' if included
-        if "customer_no" in input_df.columns:
-            customer_ids = input_df["customer_no"]
-            input_df = input_df.drop(columns=["customer_no"])
-        else:
-            customer_ids = None
+        model = model_data["model"]
+        required_columns = model_data["columns"]
 
-        # Check for missing columns
-        missing_cols = [col for col in required_columns if col not in input_df.columns]
+        # Load uploaded CSV
+        df_original = pd.read_csv(uploaded_csv)
+
+        # Check for required columns
+        missing_cols = [col for col in required_columns if col not in df_original.columns]
         if missing_cols:
-            st.error(f"❌ Missing required columns: {missing_cols}")
-            st.stop()
-
-        # Reorder and filter input columns to match training
-        input_df = input_df[required_columns]
-        input_df = clean_and_impute(input_df)
-        # Predict probabilities
-        probs = model.predict_proba(input_df)
-
-        # Find column index for Patron+ (label 1)
-        if model.classes_[1] == 1:
-            patron_index = 1
+            st.error(f"❌ Missing required columns for this model: {missing_cols}")
         else:
-            patron_index = list(model.classes_).index(1)
+            # Keep customer_no if present
+            customer_nos = df_original["customer_no"] if "customer_no" in df_original.columns else None
 
-        input_df["Patron+_Probability"] = probs[:, patron_index]
+            # Prepare input for model (drop customer_no if exists)
+            X_input = df_original[required_columns].copy()
 
-        # Add back customer_no if it existed
-        if customer_ids is not None:
-            input_df.insert(0, "customer_no", customer_ids)
+            # Impute missing values
+            X_clean = impute_for_prediction(X_input)
 
-        # Show preview
-        st.success("✅ Predictions generated!")
-        st.dataframe(input_df.head(20), use_container_width=True)
+            # Predict Patron+ probability
+            probs = model.predict_proba(X_clean)[:, 1]
 
-        # Download
-        st.download_button(
-            label="📥 Download Predictions CSV",
-            data=input_df.to_csv(index=False).encode("utf-8"),
-            file_name="patron_predictions.csv",
-            mime="text/csv"
-        )
+            # Build result DataFrame
+            output_df = df_original.copy()
+            output_df["Patron+ Probability"] = probs
+
+            # Preview
+            st.subheader("🔍 Preview of Predictions")
+            st.dataframe(output_df.head(20), use_container_width=True)
+
+            # Download
+            csv_output = output_df.to_csv(index=False).encode("utf-8")
+            st.download_button("⬇️ Download CSV with Patron+ Predictions", csv_output, file_name="patron_predictions.csv", mime="text/csv")
 
     except Exception as e:
-        st.error(f"❌ Error processing CSV: {e}")
+        st.error(f"❌ Error processing model or CSV: {e}")
