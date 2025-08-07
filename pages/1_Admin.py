@@ -85,12 +85,14 @@ if st.session_state.show_builder:
             with st.spinner("Training and stacking models..."):
                 uploaded_files = [file for (_, file, _) in category_info]
                 model_choices = [model for (_, _, model) in category_info]
+                category_names = [name for (name, _, _) in category_info]
 
                 success = train_and_save_stacked_model(
                     uploaded_files,
                     model_choices,
                     model_name.strip(),   # Cleaned model name
-                    final_model_choice
+                    final_model_choice, 
+                    category_names 
                 )
 
                 if success:

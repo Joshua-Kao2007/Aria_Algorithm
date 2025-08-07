@@ -45,5 +45,6 @@ def clean_and_impute(df):
 
     # Recombine them
     df_cleaned = pd.concat([patron_df, nonpatron_df], axis=0).reset_index(drop=True)
+    print(df_cleaned.tail(20))
 
     return df_cleaned
