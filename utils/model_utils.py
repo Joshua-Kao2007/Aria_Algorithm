@@ -52,18 +52,24 @@ def train_and_save_stacked_model(uploaded_files, model_choices, model_name, fina
             passthrough=False,
             cv=3
         )
-        stacking_model.fit(X, y)
 
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        stacking_model.fit(X_train, y_train)
+
+
+        print("GOT HERE")
         # Save everything
         os.makedirs("models", exist_ok=True)
         joblib.dump({
             "model": stacking_model,
-            "X_sample": X.head(100),
-            "y_sample": y.head(100),
+            "X_test": X_test,
+            "y_test": y_test,
             "columns": X.columns.tolist(),
             "category_models": model_choices,
             "category_names": [f"model_{i}" for i in range(len(model_choices))]
         }, f"models/{model_name}.pkl")
+        print("Model saved successfully.")
 
         print(f"✅ Stacked model '{model_name}' trained and saved successfully.")
         return True
