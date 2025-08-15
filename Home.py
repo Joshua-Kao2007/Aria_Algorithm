@@ -21,4 +21,4 @@ with col2:
 
 # Footer
 st.markdown("---")
-st.markdown("Created by Joshua Kao © 2025")
+st.markdown("@ 2025 Houston Grand Opera. All Rights Reserved.  \n Created by Joshua Kao")

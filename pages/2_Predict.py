@@ -49,6 +49,8 @@ if model_name and uploaded_csv:
             # Build result DataFrame
             output_df = df_original.copy()
             output_df["Patron+ Alikeness"] = probs
+            # Classify using threshold 0.25
+            output_df["Predicted Patron+ (0.25 threshold)"] = (probs >= 0.25).map({True: "Patron+", False: "Under-Patron"})
 
             # Preview
             st.subheader("🔍 Preview of Predictions")
