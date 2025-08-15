@@ -52,7 +52,7 @@ if model_name and uploaded_csv:
 
             # Only show and export the probability column, renamed for clarity
             output_df["Patron+ Alikeness"] = probs
-            output_df = output_df[["customer_no", "Patron+ Aliekness"]] if "customer_no" in output_df.columns else output_df[["Patron+ Alikeness"]]
+            output_df = output_df[["customer_no", "Patron+ Alikeness"]] if "customer_no" in output_df.columns else output_df[["Patron+ Alikeness"]]
 
             # Preview
             st.subheader("🔍 Preview of Predictions")
