@@ -48,7 +48,7 @@ if model_name and uploaded_csv:
 
             # Build result DataFrame
             output_df = df_original.copy()
-            output_df["Patron+ Probability"] = probs
+            output_df["Patron+ Alikeness"] = probs
 
             # Preview
             st.subheader("🔍 Preview of Predictions")
