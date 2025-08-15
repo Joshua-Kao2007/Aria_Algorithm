@@ -103,6 +103,54 @@ if st.button("🔍 Submit to View Model Performance"):
         disp.plot(ax=ax, cmap="Blues")
         st.pyplot(fig)
 
+
+        # === FEATURE IMPORTANCES ===
+        st.subheader("🔬 Feature Importances")
+        def plot_feature_importances(importances, feature_names, title="Feature Importances"):
+            sorted_idx = np.argsort(importances)[::-1]
+            plt.figure(figsize=(8, min(0.4*len(feature_names), 8)))
+            plt.barh(range(len(importances)), importances[sorted_idx], align="center")
+            plt.yticks(range(len(importances)), [feature_names[i] for i in sorted_idx])
+            plt.xlabel("Importance")
+            plt.title(title)
+            st.pyplot(plt.gcf())
+            plt.close()
+
+        # Try to get feature names
+        feature_names = None
+        try:
+            if hasattr(X_test, 'columns'):
+                feature_names = X_test.columns
+            elif hasattr(model, 'feature_names_in_'):
+                feature_names = model.feature_names_in_
+        except Exception:
+            feature_names = None
+
+        # Handle different model types
+        import numpy as np
+        if hasattr(model, 'feature_importances_'):
+            # Tree-based models
+            importances = model.feature_importances_
+            if feature_names is None:
+                feature_names = [f"Feature {i}" for i in range(len(importances))]
+            plot_feature_importances(importances, feature_names)
+        elif hasattr(model, 'estimators_') and hasattr(model, 'named_estimators_'):
+            # StackingClassifier
+            st.markdown("**Stacking Ensemble - Feature Importances by Base Estimator:**")
+            for name, est in model.named_estimators_.items():
+                if hasattr(est, 'feature_importances_'):
+                    st.markdown(f"**{name}**")
+                    importances = est.feature_importances_
+                    plot_feature_importances(importances, feature_names, title=f"{name} Feature Importances")
+                elif hasattr(est, 'coef_'):
+                    st.markdown(f"**{name} (coefficients)**")
+                    importances = np.abs(est.coef_).flatten()
+                    plot_feature_importances(importances, feature_names, title=f"{name} Coefficients")
+                else:
+                    st.markdown(f"{name}: No feature importances available.")
+        else:
+            st.info("Feature importances are not available for this model type.")
+
         # Preview of test data
         st.subheader("🔍 Test Data with Predictions")
         preview_df = X_test.copy()

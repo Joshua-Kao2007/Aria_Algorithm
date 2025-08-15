@@ -86,7 +86,7 @@ if st.session_state.show_builder:
                 uploaded_files = [file for (_, file, _) in category_info]
                 model_choices = [model for (_, _, model) in category_info]
                 category_names = [name for (name, _, _) in category_info]
-
+                print("BBBBB")
                 success = train_and_save_stacked_model(
                     uploaded_files,
                     model_choices,
@@ -94,7 +94,7 @@ if st.session_state.show_builder:
                     final_model_choice, 
                     category_names 
                 )
-
+                print("AAAAA")
                 if success:
                     st.success(f"✅ Model `{model_name}` saved successfully in `/models`.")
                     st.session_state.stack_ready = False

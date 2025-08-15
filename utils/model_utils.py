@@ -46,12 +46,12 @@ def train_and_save_stacked_model(uploaded_files, model_choices, model_name, fina
         # Determine dataset size for dynamic tuning
         n_rows = X.shape[0]
 
+        feature_importances = {}
+
         # --- Build base estimators with "medium" complexity ---
         estimators = []
         for i, model_name_str in enumerate(model_choices):
             model_cls = MODEL_MAP[model_name_str]
-
-            # Default parameters
             params = {}
 
             if model_name_str == "Random Forest":
@@ -94,6 +94,16 @@ def train_and_save_stacked_model(uploaded_files, model_choices, model_name, fina
             model = model_cls(**params)
             model.fit(X, y)
             estimators.append((f"model_{i}", model))
+
+            # --- Feature importance extraction ---
+            importances = None
+            if hasattr(model, "feature_importances_"):
+                importances = model.feature_importances_
+            elif hasattr(model, "coef_"):
+                importances = model.coef_[0] if hasattr(model.coef_, "__len__") else model.coef_
+            # Save as dict: {feature_name: importance}
+            if importances is not None:
+                feature_importances[f"model_{i}"] = dict(zip(X.columns, importances))
 
         # --- Build final meta-estimator with "tons of iterations" ---
         final_cls = MODEL_MAP[final_estimator_str]
@@ -148,7 +158,8 @@ def train_and_save_stacked_model(uploaded_files, model_choices, model_name, fina
             "y_test": y_test,
             "columns": X.columns.tolist(),
             "category_models": model_choices,
-            "category_names": [f"model_{i}" for i in range(len(model_choices))]
+            "category_names": [f"model_{i}" for i in range(len(model_choices))],
+            "feature_importances": feature_importances  # <-- add this line
         }, f"models/{model_name}.pkl")
 
         print(f"✅ Stacked model '{model_name}' trained and saved successfully.")
