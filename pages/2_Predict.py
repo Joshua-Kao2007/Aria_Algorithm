@@ -49,9 +49,10 @@ if model_name and uploaded_csv:
 
             # Build result DataFrame
             output_df = df_original.copy()
-            output_df["Patron+ Alikeness"] = probs
-            # Classify using threshold 0.25
-            output_df["Predicted Patron+ (0.25 threshold)"] = np.where(probs >= 0.25, "Patron+", "Under-Patron")
+
+            # Only show and export the probability column, renamed for clarity
+            output_df["Patron+ Probability"] = probs
+            output_df = output_df[["customer_no", "Patron+ Probability"]] if "customer_no" in output_df.columns else output_df[["Patron+ Probability"]]
 
             # Preview
             st.subheader("🔍 Preview of Predictions")
@@ -59,7 +60,7 @@ if model_name and uploaded_csv:
 
             # Download
             csv_output = output_df.to_csv(index=False).encode("utf-8")
-            st.download_button("⬇️ Download CSV with Patron+ Predictions", csv_output, file_name="patron_predictions.csv", mime="text/csv")
+            st.download_button("⬇️ Download CSV with Patron+ Probability", csv_output, file_name="patron_probability.csv", mime="text/csv")
 
     except Exception as e:
         st.error(f"❌ Error processing model or CSV: {e}")
